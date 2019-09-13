@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "8b10b_ctb.h"
 
 struct sym8b10b {
         uint8_t result;
@@ -10,7 +11,7 @@ static struct sym8b10b tab3b4b[][9] = {
                 { 0b1011, 1 },
                 { 0b1001, 0 },
                 { 0b0101, 0 },
-                { 0b1100, 1 },
+                { 0b1100, 0 },
                 { 0b1101, 1 },
                 { 0b1010, 0 },
                 { 0b0110, 0 },
@@ -21,7 +22,7 @@ static struct sym8b10b tab3b4b[][9] = {
                 { 0b0100, 0 },
                 { 0b1001, 1 },
                 { 0b0101, 1 },
-                { 0b0011, 0 },
+                { 0b0011, 1 },
                 { 0b0010, 0 },
                 { 0b1010, 1 },
                 { 0b0110, 1 },
@@ -39,7 +40,7 @@ static struct sym8b10b tab5b6b[][32] = {
                 { 0b110101, 1 },
                 { 0b101001, 0 },
                 { 0b011001, 0 },
-                { 0b111000, 1 },
+                { 0b111000, 0 },
                 { 0b111001, 1 },
                 { 0b100101, 0 },
                 { 0b010101, 0 },
@@ -73,7 +74,7 @@ static struct sym8b10b tab5b6b[][32] = {
                 { 0b001010, 0 },
                 { 0b101001, 1 },
                 { 0b011001, 1 },
-                { 0b000111, 0 },
+                { 0b000111, 1 },
                 { 0b000110, 0 },
                 { 0b100101, 1 },
                 { 0b010101, 1 },
@@ -104,23 +105,29 @@ static struct sym8b10b tab5b6b[][32] = {
 uint16_t
 encode_8b10b(uint8_t p8b, uint8_t *rd)
 {
-        uint8_t p3b, p5b, p4b, p6b;
-        struct sym8b10b p4br, p6br;
-        p5b = p8b & 0b00011111;
-        p3b = (p8b & 0b11100000) >> 5;
+        uint8_t py, px, y, x;
+        struct sym8b10b yr, xr;
+        px = p8b & 0b00011111;
+        py = (p8b & 0b11100000) >> 5;
 
 
-        p6br = tab5b6b[*rd][p5b];
-        *rd = p6br.next_rd;
-        p6b = p6br.result;
+        xr = tab5b6b[*rd][px];
+        *rd = xr.next_rd;
+        x = xr.result;
         
-        if ((*rd && !(p6b & 0b11) || !*rd && (p6b & 0b11 == 0b11))
-                        && p3b == 0b111)
-                p3b++;
+        if (py == 0b111)
+                if (*rd) {
+                        if (px == 11 || px == 13 || px == 14)
+                                py++;
+                } else {
+                        if (px == 17 || px == 18 || px == 20)
+                                py++;
+                }
 
-        p4br = tab3b4b[*rd][p3b];
-        *rd = p4br.next_rd;
-        p4b = p4br.result;
+        yr = tab3b4b[*rd][py];
+        *rd = yr.next_rd;
+        y = yr.result;
 
-        return ((uint16_t)p6b << 4) | (uint16_t)p4b;
+        return ((uint16_t)x << 4) | (uint16_t)y;
 }
+
